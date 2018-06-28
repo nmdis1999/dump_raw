@@ -16,10 +16,6 @@
 
 static char *cmd_name = NULL;
 
-static uint32_t cmv_base = 0x60000000;
-static uint32_t cmv_size = 0x00400000;
-static uint32_t cmv_addr = 0x00000000;
-
 static uint32_t map_base = 0x18000000;
 static uint32_t map_size = 0x08000000;
 
@@ -32,13 +28,51 @@ static bool out_buf = false;
 
 
 int main(int argc, char *argv[]) {
-    extern int optind;
-    extern char *optarg;
-    
+    extern int optind; /* set by getopt to the index of the next element of the argv array to be processed */
+    extern char *optarg; /* set by getopt to point at the value of the option argument */
+
     cmd_name = argv[0];
 
-    out_buf = true;
+    int c, err_flag = 0;
 
+#define    OPTIONS "hd:B:S"
+
+    cmd_name = argv[0];
+    while ((c = getopt(argc, argv, OPTIONS)) != EOF) {
+        switch (c) {
+            case 'h':
+                fprintf(stderr,
+                        "options are:\n"
+                        "-h        print this help message\n"
+                        "-d        dump buffer data\n"
+                        "-B <val>  memory mapping base\n"
+                        "-S <val>  memory mapping size\n", cmd_name);
+                exit(0);
+                break;
+
+            case 'r':
+                out_buf = true;
+                break;
+            case 'B' :
+                map_base = strtoll(optarg, NULL, 16); /* produces a number of type long long int */
+            case 'S' :
+                map_size = strtoll(optarg, NULL, 16);
+            default:
+                err_flag++;
+                break;
+        }
+    }
+
+    /* If no option is matched print this message */
+    if (err_flag) {
+        fprintf(stderr,
+                "Usage: %s -[" OPTIONS "] [file]\n"
+                "%s -h for help.\n",
+                cmd_name, cmd_name);
+        exit(2);
+    }
+
+    /* Opening dev/mem with read/write permission */
     int fd = open(dev_mem, O_RDWR | O_SYNC);
     if (fd == -1) {
         fprintf(stderr,
@@ -47,21 +81,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    if (cmv_addr == 0)
-        cmv_addr = cmv_base;
-
-    void *base = mmap((void *) cmv_addr, cmv_size,
-                      PROT_READ | PROT_WRITE, MAP_SHARED,
-                      fd, cmv_base);
-    if (base == (void *) -1) {
-        fprintf(stderr,
-                "error mapping 0x%08lX+0x%08lX @0x%08lX.\n%s\n",
-                (long) cmv_base, (long) cmv_size, (long) cmv_addr,
-                strerror(errno));
-        exit(2);
-    } else
-        cmv_addr = (long unsigned) base;
-
+    /* Mapping frane buffer */
     void *buf = mmap((void *) map_addr, map_size,
                      PROT_READ | PROT_WRITE, MAP_SHARED,
                      fd, map_base);
@@ -74,15 +94,17 @@ int main(int argc, char *argv[]) {
     } else
         map_addr = (long unsigned) buf;
 
-    uint64_t *dp = (uint64_t *) (map_addr);
-    size_t ds = 0x121eac0;
+    uint64_t *dp = (uint64_t *) (map_addr);  /* Data pointer */
+    size_t ds = 0x112a880;    /* Hex notation for 18MB file i.e 18,000,000 bytes */
 
+    /* Starting to write image */
     if (out_buf) {
         fprintf(stderr, "dumping buffer data ...\n");
         fprintf(stderr, "%p %ld\n", dp, ds);
 
         while (ds > 0) {
-            ssize_t cnt = write(1, dp, ds);
+            ssize_t cnt = write(1, dp, ds); /* 1 is for standard output, dp is pointer to buf of ds bytes, and ds is number of
+            bytes */
 
             fprintf(stderr, "%p %ld -> %ld\n", dp, ds, cnt);
             dp = (uint64_t *) (((char *) dp) + cnt);
@@ -90,5 +112,9 @@ int main(int argc, char *argv[]) {
         }
 
     }
+
+    printf("%u\n", map_base);
+
+    exit((err_flag) ? 1 : 0);
 
 }
