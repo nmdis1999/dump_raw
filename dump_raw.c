@@ -12,7 +12,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <math.h>
 
 static char *cmd_name = NULL;
 
@@ -95,7 +94,7 @@ int main(int argc, char *argv[]) {
         map_addr = (long unsigned) buf;
 
     uint64_t *dp = (uint64_t *) (map_addr);  /* Data pointer */
-    size_t ds = 0x112a880;    /* Hex notation for 18MB file i.e 18,000,000 bytes */
+    size_t ds = 0x1200100;    /* Hex notation for 18MB file i.e 18,000,000 bytes */
 
     /* Starting to write image */
     if (out_buf) {
@@ -116,5 +115,4 @@ int main(int argc, char *argv[]) {
     printf("%u\n", map_base);
 
     exit((err_flag) ? 1 : 0);
-
 }
