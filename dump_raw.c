@@ -20,11 +20,9 @@ static uint32_t map_size = 0x08000000;
 
 static uint32_t map_addr = 0x00000000;
 
-
 static char *dev_mem = "/dev/mem";
 
 static bool out_buf = false;
-
 
 int main(int argc, char *argv[]) {
     extern int optind; /* set by getopt to the index of the next element of the argv array to be processed */
